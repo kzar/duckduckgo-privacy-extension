@@ -19,7 +19,6 @@ describe('Site', () => {
     describe('getSpecialDomain()', () => {
         const tests = [
             { url: 'https://duckduckgo.com', expected: null },
-            { url: 'localhost:3000', expected: 'localhost' },
             { url: '', expected: 'new tab' },
             { url: 'chrome-search://local-ntp/local-ntp.html', expected: 'new tab' },
             { url: 'chrome://extensions', expected: 'extensions' },

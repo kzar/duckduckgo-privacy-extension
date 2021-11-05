@@ -18,6 +18,16 @@ window.dbg = {
     tds
 }
 
+// Open the devtools-panel.html page automatically.
+if (typeof browser === 'undefined') {
+    window.browser = window.chrome
+}
+browser.tabs.create({
+    url: '/html/devtools-panel.html',
+    pinned: true,
+    active: false
+})
+
 // mark this as a dev build
 // when we request certain resources, this flag will prevent any
 // metrics from being thrown off

@@ -54,7 +54,12 @@ module.exports = function (grunt) {
 
     // for the dev version of the extension only, add some extra debug code
     if (buildType === 'dev') {
-        baseFileMap.background['<%= dirs.public.js %>/background.js'].unshift('<%= dirs.src.js %>/background/debug.es6.js')
+        const backgroundFile = baseFileMap.background['<%= dirs.public.js %>/background.js']
+        backgroundFile.unshift('<%= dirs.src.js %>/background/debug.es6.js')
+
+        if (grunt.option('watch')) {
+            backgroundFile.unshift('<%= dirs.src.js %>/background/debug-reload.es6.js')
+        }
     }
 
     /* watch any base files and browser specific files */
@@ -182,45 +187,46 @@ module.exports = function (grunt) {
             copyData: `cp -r shared/data build/${browser}/${buildType}/`,
             copyAutofillJs: `mkdir -p build/${browser}/${buildType}/public/js/content-scripts/ && cp ${ddgAutofill}/*.js build/${browser}/${buildType}/public/js/content-scripts/`,
             copyAutofillCSS: `cp -r ${ddgAutofill}/autofill.css build/${browser}/${buildType}/public/css/`,
-            copyAutofillHostCSS: `cp -r ${ddgAutofill}/autofill-host-styles_${browser}.css build/${browser}/${buildType}/public/css/autofill-host-styles.css`
+            copyAutofillHostCSS: `cp -r ${ddgAutofill}/autofill-host-styles_${browser}.css build/${browser}/${buildType}/public/css/autofill-host-styles.css`,
+            updateDevbuildID: `echo "<%= Math.random() %>" > build/${browser}/${buildType}/devbuild-id.txt`
         },
 
         watch: {
             scss: {
                 files: watch.sass,
-                tasks: ['sass']
+                tasks: ['sass', 'exec:updateDevbuildID']
             },
             ui: {
                 files: watch.ui,
-                tasks: ['browserify:ui', 'exec:copyData']
+                tasks: ['browserify:ui', 'exec:copyData', 'exec:updateDevbuildID']
             },
             contentScope: {
                 files: watch.contentScope,
-                tasks: ['exec:copyContentScope']
+                tasks: ['exec:copyContentScope', 'exec:updateDevbuildID']
             },
             backgroundES6JS: {
                 files: watch.background,
-                tasks: ['browserify:background']
+                tasks: ['browserify:background', 'exec:updateDevbuildID']
             },
             backgroundJS: {
                 files: ['<%= dirs.src.js %>/*.js'],
-                tasks: ['exec:copyjs']
+                tasks: ['exec:copyjs', 'exec:updateDevbuildID']
             },
             contentScripts: {
                 files: watch.contentScripts,
-                tasks: ['exec:copyContentScripts']
+                tasks: ['exec:copyContentScripts', 'exec:updateDevbuildID']
             },
             autofillContentScript: {
                 files: watch.autofillContentScript,
-                tasks: ['exec:copyAutofillJs']
+                tasks: ['exec:copyAutofillJs', 'exec:updateDevbuildID']
             },
             autofillCSS: {
                 files: watch.autofillCSS,
-                tasks: ['exec:copyAutofillCSS', 'exec:copyAutofillHostCSS']
+                tasks: ['exec:copyAutofillCSS', 'exec:copyAutofillHostCSS', 'exec:updateDevbuildID']
             },
             data: {
                 files: watch.data,
-                tasks: ['exec:copyData']
+                tasks: ['exec:copyData', 'exec:updateDevbuildID']
             }
         },
 
@@ -238,7 +244,16 @@ module.exports = function (grunt) {
         }
     })
 
-    grunt.registerTask('build', 'Build project(s)css, templates, js', ['sass', 'browserify:ui', 'browserify:background', 'browserify:backgroundTest', 'exec:copyContentScope', 'exec:copyAutofillJs', 'exec:copyAutofillCSS', 'exec:copyAutofillHostCSS'])
+    const build = [
+        'sass', 'browserify:ui', 'browserify:background', 'browserify:backgroundTest',
+        'exec:copyContentScope', 'exec:copyAutofillJs', 'exec:copyAutofillCSS',
+        'exec:copyAutofillHostCSS'
+    ]
+
+    if (buildType === 'dev') {
+        build.push('exec:updateDevbuildID')
+    }
+    grunt.registerTask('build', 'Build project(s)css, templates, js', build)
 
     const devTasks = ['build']
     if (grunt.option('watch')) {

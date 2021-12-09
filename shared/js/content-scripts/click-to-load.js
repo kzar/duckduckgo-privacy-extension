@@ -357,6 +357,40 @@
             border: 0;
             padding: 0;
             margin: 0;
+        `,
+        youTubePlaceholder: `
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background-color: black;
+            cursor: pointer;
+        `,
+        youTubeTitle: `
+            position: absolute;
+            z-index: 2;
+            left: 0;
+            right: 0;
+            font-size: 18px;
+            color: white;
+            cursor: pointer;
+            background-color: rgba(0, 0, 0, 0.5);
+            margin: 0;
+            padding: 0.5em;
+        `,
+        youTubePlayButton: `
+            position: absolute;
+            z-index: 2;
+            font-size: 18px;
+            color: white;
+            cursor: pointer;
+            background-color: rgba(0, 0, 0, 0.5);
+            padding: 1em;
+            text-align: center;
+            width: 50%;
+            align-self: center;
         `
     }
 
@@ -523,12 +557,19 @@
                 }
             }
 
-            // Ensure the video doesn't auto-play.
-            const allowString = videoElement.getAttribute('allow') || ''
+            // Configure auto-play correctly depending on if the video's preview
+            // loaded.
+            let allowString = videoElement.getAttribute('allow') || ''
             const allowed = new Set(allowString.split(';').map(s => s.trim()))
-            allowed.delete('autoplay')
-            url.searchParams.delete('autoplay')
-            videoElement.setAttribute('allow', Array.from(allowed).join('; '))
+            if (this.autoplay) {
+                allowed.add('autoplay')
+                url.searchParams.set('autoplay', '1')
+            } else {
+                allowed.delete('autoplay')
+                url.searchParams.delete('autoplay')
+            }
+            allowString = Array.from(allowed).join('; ')
+            videoElement.setAttribute('allow', allowString)
 
             videoElement.src = url.href
             return onError
@@ -759,8 +800,7 @@
             replaceTrackingElement(widget, trackingElement, container)
         }
 
-        const youTubeVideo = widget.replaceSettings.type === 'youtube-video'
-        if (widget.replaceSettings.type === 'dialog' || youTubeVideo) {
+        if (widget.replaceSettings.type === 'dialog') {
             const icon = await sendMessage('getImage', widget.replaceSettings.icon)
             const button = makeButton(widget.replaceSettings.buttonText, widget.getMode())
             const textButton = makeTextButton(widget.replaceSettings.buttonText, widget.getMode())
@@ -770,22 +810,7 @@
             button.addEventListener('click', widget.clickFunction(trackingElement, contentBlock))
             textButton.addEventListener('click', widget.clickFunction(trackingElement, contentBlock))
 
-            replaceTrackingElement(
-                widget, trackingElement, contentBlock, /* hideTrackingElement= */youTubeVideo
-            )
-
-            if (youTubeVideo) {
-                // Size the placeholder element to match the original video
-                // element.
-                // Note: If the website later resizes the video element, the
-                //       placeholder will not resize to match.
-                const {
-                    width: videoWidth,
-                    height: videoHeight
-                } = window.getComputedStyle(trackingElement)
-                contentBlock.style.width = videoWidth
-                contentBlock.style.height = videoHeight
-            }
+            replaceTrackingElement(widget, trackingElement, contentBlock)
 
             // Show the extra unblock link in the header if the placeholder or
             // its parent is too short for the normal unblock button to be visible.
@@ -797,6 +822,19 @@
                 const titleRowTextButton = shadowRoot.querySelector(`#${titleID + 'TextButton'}`)
                 titleRowTextButton.style.display = 'block'
             }
+        }
+
+        if (widget.replaceSettings.type === 'youtube-video') {
+            const { placeholder, shadowRoot } =
+                  await createYouTubePlaceholder(trackingElement, widget)
+            shadowRoot.firstElementChild.addEventListener(
+                'click',
+                widget.clickFunction(trackingElement, placeholder)
+            )
+
+            replaceTrackingElement(
+                widget, trackingElement, placeholder, /* hideTrackingElement= */ true
+            )
         }
     }
 
@@ -1211,5 +1249,87 @@
         contentRow.appendChild(buttonRow)
 
         return { contentBlock, shadowRoot }
+    }
+
+    function getYouTubeVideoDetails (videoURL) {
+        return sendMessage('getYouTubeVideoDetails', videoURL)
+    }
+
+    /**
+     * Creates the placeholder element to replace a YouTube video iframe element
+     * with. Mutates widget Object to set the autoplay property as the preview
+     * details load.
+     * @param {Element} originalElement
+     *   The YouTube video iframe element.
+     * @param {Object} widget
+     *   The widget Object. We mutate this to set the autoplay property.
+     * @returns {Object}
+     *   Object containing the placeholder element and its shadowRoot.
+     */
+    async function createYouTubePlaceholder (originalElement, widget) {
+        const placeholder = document.createElement('div')
+        placeholder.style.cssText = styles.wrapperDiv
+
+        // Size the placeholder element to match the original video element.
+        // Note: The placeholder does later resize, even if the original video
+        //       element would have.
+        const { width, height } = originalElement.getBoundingClientRect()
+        placeholder.style.width = width + 'px'
+        placeholder.style.height = height + 'px'
+
+        // Protect the contents of our placeholder inside a shadowRoot, to avoid
+        // it being styled by the website's stylesheets.
+        const shadowRoot = placeholder.attachShadow({ mode: (await devMode) ? 'open' : 'closed' })
+
+        const innerDiv = document.createElement('div')
+        innerDiv.style.cssText = styles.youTubePlaceholder
+        innerDiv.style.position = 'relative'
+
+        // We use an image element for the preview image so that we can ensure
+        // the referrer isn't passed.
+        const previewImageElement = document.createElement('img')
+        previewImageElement.setAttribute('referrerPolicy', 'no-referrer')
+        previewImageElement.style.height = '100%'
+        innerDiv.appendChild(previewImageElement, innerDiv.firstChildElement)
+
+        const logoElement = document.createElement('img')
+        logoElement.style.cssText = styles.logoImg
+        logoElement.setAttribute('src', logoImg)
+
+        const titleElement = document.createElement('p')
+        titleElement.style.cssText = styles.youTubeTitle
+        titleElement.appendChild(logoElement)
+        innerDiv.appendChild(titleElement)
+
+        const buttonText = document.createElement('span')
+        buttonText.innerText = 'Click to Load'
+
+        const playButton = document.createElement('button')
+        playButton.style.cssText = styles.youTubePlayButton
+        // FIXME - Hack to position button in roughly the middle of video.
+        playButton.style.top = Math.round((height / 2)) + 'px'
+
+        playButton.appendChild(buttonText)
+        innerDiv.appendChild(playButton)
+
+        shadowRoot.appendChild(innerDiv)
+
+        widget.autoplay = false
+        getYouTubeVideoDetails(originalElement.src).then(
+            ({ status, title, previewImage }) => {
+                if (status === 'success') {
+                    const span = document.createElement('span')
+                    span.innerText = title
+                    titleElement.appendChild(span)
+                    if (previewImage) {
+                        previewImageElement.setAttribute('src', previewImage)
+                    }
+                    buttonText.innerText = 'Click to Play'
+                    widget.autoplay = true
+                }
+            }
+        )
+
+        return { placeholder, shadowRoot }
     }
 })()

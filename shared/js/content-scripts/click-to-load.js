@@ -524,6 +524,8 @@
                     loadingImg.style.cssText = styles.loadingImg
 
                     // Always add the animation to the button, regardless of click source
+                    // FIXME - srcElement is not supported by Firefox < 62.
+                    //         See https://developer.mozilla.org/en-US/docs/Web/API/Event/srcElement
                     if (e.srcElement.nodeName === 'BUTTON') {
                         e.srcElement.firstElementChild.insertBefore(loadingImg, e.srcElement.firstElementChild.firstChild)
                     } else {
@@ -950,6 +952,11 @@
         const fontFaceStyleElement = document.createElement('style')
         fontFaceStyleElement.textContent = styles.fontStyle
         contentBlock.appendChild(fontFaceStyleElement)
+
+        // Firefox < 63 does not support attachShadow, workaround that here.
+        // See https://developer.mozilla.org/en-US/docs/Web/API/Element/attachShadow
+        if (typeof contentBlock.attachShadow === 'undefined')
+            contentBlock.attachShadow = () => contentBlock
 
         // Put everyting else inside the shadowRoot of the wrapper element to
         // reduce the chances of the website's stylesheets messing up the

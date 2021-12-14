@@ -21,7 +21,7 @@ export function init (args) {
                 enumerable: true
             })
         }
-    } catch {
+    } catch (e) {
         // Ignore exceptions that could be caused by conflicting with other extensions
     }
 }

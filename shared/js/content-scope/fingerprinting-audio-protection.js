@@ -47,7 +47,7 @@ export function init (args) {
                 thisArg.getChannelData(channelNumber).slice(startInChannel).forEach((val, index) => {
                     source[index] = val
                 })
-            } catch {
+            } catch (e) {
                 return DDGReflect.apply(target, thisArg, args)
             }
         }
@@ -80,7 +80,7 @@ export function init (args) {
             // Anything we do here should be caught and ignored silently
             try {
                 transformArrayData(channelData, domainKey, sessionKey, thisArg, args)
-            } catch {
+            } catch (e) {
             }
             return channelData
         }
@@ -95,7 +95,7 @@ export function init (args) {
                 // Anything we do here should be caught and ignored silently
                 try {
                     transformArrayData(args[0], domainKey, sessionKey, thisArg, args)
-                } catch {
+                } catch (e) {
                 }
             }
         })

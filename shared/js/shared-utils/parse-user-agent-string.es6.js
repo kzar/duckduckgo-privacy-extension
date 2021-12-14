@@ -1,4 +1,15 @@
 module.exports = (uaString) => {
+    // Firefox < 65 does not support `globalThis`. We don't support Node.js
+    // versions without `globalThis` support, so we can just check `self` and
+    // `window`.
+    if (typeof globalThis === 'undefined')
+    {
+        if (typeof self !== 'undefined')
+            self.globalThis = self
+        else if (typeof window !== 'undefined')
+            window.globalThis = window
+    }
+
     if (!uaString) uaString = globalThis.navigator.userAgent
 
     let browser

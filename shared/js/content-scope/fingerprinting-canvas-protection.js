@@ -72,7 +72,7 @@ export function init (args) {
                 const { offScreenCtx } = getCachedOffScreenCanvasOrCompute(thisArg.canvas, domainKey, sessionKey, getImageDataProxy)
                 // Call the original method on the modified off-screen canvas
                 return DDGReflect.apply(target, offScreenCtx, args)
-            } catch {
+            } catch (e) {
             }
 
             return DDGReflect.apply(target, thisArg, args)
@@ -104,7 +104,7 @@ export function init (args) {
                     const { offScreenCanvas } = getCachedOffScreenCanvasOrCompute(thisArg, domainKey, sessionKey, getImageDataProxy)
                     // Call the original method on the modified off-screen canvas
                     return DDGReflect.apply(target, offScreenCanvas, args)
-                } catch {
+                } catch (e) {
                     // Something we did caused an exception, fall back to the native
                     return DDGReflect.apply(target, thisArg, args)
                 }

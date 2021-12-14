@@ -1,6 +1,7 @@
 import browser from 'webextension-polyfill'
 const { getSetting, updateSetting } = require('./settings.es6')
 const REFETCH_ALIAS_ALARM = 'refetchAlias'
+const parseUserAgentString = require('../shared-utils/parse-user-agent-string.es6')
 
 // Keep track of the number of attempted fetches. Stop trying after 5.
 let attempts = 1
@@ -44,27 +45,36 @@ const fetchAlias = () => {
         })
 }
 
+// Firefox < 63 does not support passing the visible option to `contextMenus.create`.
+// See https://developer.mozilla.org/docs/Mozilla/Add-ons/WebExtensions/API/menus/create#browser_compatibility
+const { version: browserVersion, browser: browserName } = parseUserAgentString()
+let unsupportedBrowser = browserName.toLowerCase()  === 'firefox' &&
+                             parseFloat(browserVersion, 10) < 63
+
 const MENU_ITEM_ID = 'ddg-autofill-context-menu-item'
-// Create the contextual menu hidden by default
-browser.contextMenus.create({
-    id: MENU_ITEM_ID,
-    title: 'Use Duck Address',
-    contexts: ['editable'],
-    visible: false
-})
-browser.contextMenus.onClicked.addListener((info, tab) => {
-    const userData = getSetting('userData')
-    if (userData.nextAlias) {
-        browser.tabs.sendMessage(tab.id, {
-            type: 'contextualAutofill',
-            alias: userData.nextAlias
-        })
-    }
-})
+if (!unsupportedBrowser) {
+  // Create the contextual menu hidden by default
+  browser.contextMenus.create({
+      id: MENU_ITEM_ID,
+      title: 'Use Duck Address',
+      contexts: ['editable'],
+      visible: false
+  })
 
-const showContextMenuAction = () => browser.contextMenus.update(MENU_ITEM_ID, { visible: true })
+  browser.contextMenus.onClicked.addListener((info, tab) => {
+      const userData = getSetting('userData')
+      if (userData.nextAlias) {
+          browser.tabs.sendMessage(tab.id, {
+              type: 'contextualAutofill',
+              alias: userData.nextAlias
+          })
+      }
+  })
+}
 
-const hideContextMenuAction = () => browser.contextMenus.update(MENU_ITEM_ID, { visible: false })
+const showContextMenuAction = () => !unsupportedBrowser && browser.contextMenus.update(MENU_ITEM_ID, { visible: true })
+
+const hideContextMenuAction = () => !unsupportedBrowser && browser.contextMenus.update(MENU_ITEM_ID, { visible: false })
 
 const getAddresses = () => {
     const userData = getSetting('userData')

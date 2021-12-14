@@ -10,7 +10,7 @@ const browserInfo = parseUserAgentString()
 export async function sendTabMessage (id, message, details) {
     try {
         await browser.tabs.sendMessage(id, message, details)
-    } catch {
+    } catch (e) {
         // Ignore errors
     }
 }

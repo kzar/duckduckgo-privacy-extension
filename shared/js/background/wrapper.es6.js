@@ -38,7 +38,7 @@ export function getExtensionId () {
 export async function notifyPopup (message) {
     try {
         await browser.runtime.sendMessage(message)
-    } catch {
+    } catch (e) {
         // Ignore this as can throw an error message when the popup is not open.
     }
 }

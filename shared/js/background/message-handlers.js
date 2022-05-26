@@ -74,6 +74,14 @@ export function getTopBlockedByPages (options) {
 export async function initClickToLoad (unused, sender) {
     await settings.ready()
     const tab = tabManager.get({ tabId: sender.tab.id })
+
+    // Wait for the configuration to finish loading before responding.
+    if (Object.keys(tdsStorage.ClickToLoadConfig).length === 0) {
+        await new Promise(
+            resolve => tdsStorage.onNextUpdate('ClickToLoadConfig', resolve)
+        )
+    }
+
     const config = { ...tdsStorage.ClickToLoadConfig }
 
     // Remove first-party entries.

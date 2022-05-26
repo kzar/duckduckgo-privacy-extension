@@ -94,7 +94,7 @@ class TDSStorage {
                     const listeners = this.onUpdatedListeners.get(listCopy.name)
                     if (listeners) {
                         window.setTimeout(() => {
-                            for (const listener of listeners) {
+                            for (const listener of listeners.slice()) {
                                 listener(listCopy.name)
                             }
                         }, 0)
@@ -227,6 +227,28 @@ class TDSStorage {
             this.onUpdatedListeners.set(name, listeners)
         }
         listeners.push(listener)
+    }
+
+    onNextUpdate (name, listener) {
+        const wrappedListener = (...args) => {
+            // Remove this listener the first time it's called.
+            // Note: When iterating through and firing the listeners, a copy of
+            //       the listeners array is used. Otherwise, removing this
+            //       listener could cause the wrong listeners to fire after the
+            //       array is mutated.
+            const listeners = this.onUpdatedListeners.get(name)
+            if (listeners && listeners.length > 0) {
+                const index = listeners.indexOf(wrappedListener)
+                if (index > -1) {
+                    listeners.splice(index, 1)
+                }
+            }
+
+            // Call the listener itself.
+            listener(...args)
+        }
+
+        this.onUpdate(name, wrappedListener)
     }
 }
 module.exports = new TDSStorage()

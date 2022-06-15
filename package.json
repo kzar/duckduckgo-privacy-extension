@@ -31,7 +31,7 @@
     },
     "devDependencies": {
         "@babel/cli": "^7.17.10",
-        "@babel/core": "^7.18.2",
+        "@babel/core": "^7.18.5",
         "@babel/node": "^7.17.10",
         "@babel/polyfill": "^7.10.4",
         "@babel/preset-env": "^7.18.2",
@@ -62,14 +62,14 @@
         "load-grunt-tasks": "5.1.0",
         "node-fetch": "^3.2.4",
         "puppeteer": "14.1.1",
-        "sass": "^1.52.1",
+        "sass": "^1.52.3",
         "standard": "17.0.0",
         "timekeeper": "^2.1.1",
         "webextension-polyfill": "^0.9.0",
         "yargs": "^17.5.1"
     },
     "dependencies": {
-        "@duckduckgo/autofill": "github:duckduckgo/duckduckgo-autofill#4.5.0",
+        "@duckduckgo/autofill": "github:duckduckgo/duckduckgo-autofill#4.6.0",
         "@duckduckgo/content-scope-scripts": "github:duckduckgo/content-scope-scripts#2.0.3",
         "@duckduckgo/jsbloom": "^1.0.2",
         "@duckduckgo/privacy-grade": "1.1.0",
@@ -87,8 +87,8 @@
         "seedrandom": "^3.0.5",
         "tldts": "^5.7.81",
         "tracker-surrogates": "github:duckduckgo/tracker-surrogates#1.0.0",
-        "underscore": "1.13.3",
-        "web-ext": "^6.8.0"
+        "underscore": "1.13.4",
+        "web-ext": "^7.0.0"
     },
     "babel": {
         "presets": [

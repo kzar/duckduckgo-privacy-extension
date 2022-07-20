@@ -74,8 +74,10 @@
     "dependencies": {
         "@duckduckgo/autofill": "github:duckduckgo/duckduckgo-autofill#4.7.0",
         "@duckduckgo/content-scope-scripts": "github:duckduckgo/content-scope-scripts#2.1.1",
+        "@duckduckgo/ddg2dnr": "github:duckduckgo/ddg2dnr#0.1.0",
         "@duckduckgo/jsbloom": "^1.0.2",
         "@duckduckgo/privacy-grade": "github:duckduckgo/privacy-grade#2.0.0",
+        "@types/chrome": "0.0.193",
         "bel": "6.0.0",
         "deep-freeze": "0.0.1",
         "dexie": "3.2.2",

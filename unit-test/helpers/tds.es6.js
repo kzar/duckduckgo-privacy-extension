@@ -4,6 +4,8 @@
  */
 const tdsStorage = require('../../shared/js/background/storage/tds.es6')
 
+const onUpdateListeners = new Map()
+
 const stub = (arg) => {
     const tdsData = {
         tds: require('./../data/tds.json'),
@@ -28,7 +30,18 @@ const stub = (arg) => {
 
     spyOn(tdsStorage, 'getDataXHR')
         .and.callFake((list, etag, source) => Promise.resolve({ response: 200, data: tdsData[list.name] }))
+
+    spyOn(tdsStorage, 'onUpdate')
+        .and.callFake((configName, listener) => {
+            let listeners = onUpdateListeners.get(configName)
+            if (!listeners) {
+                listeners = []
+                onUpdateListeners.set(configName, listeners)
+            }
+            listeners.push(listener)
+        })
 }
 module.exports = {
-    stub
+    stub,
+    onUpdateListeners
 }

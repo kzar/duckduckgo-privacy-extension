@@ -79,11 +79,15 @@ class TDSStorage {
                 this._onReadyResolvers.delete(configName)
             }
 
+            // Check the current etag for this configuration, so that can be
+            // passed to the listeners.
+            const etag = settings.getSetting(`${configName}-etag`) || ''
+
             // Notify any listeners that this list has updated.
             const listeners = this._onUpdatedListeners.get(configName)
             if (listeners) {
                 for (const listener of listeners.slice()) {
-                    listener(configName)
+                    listener(configName, etag)
                 }
             }
         }, 0)

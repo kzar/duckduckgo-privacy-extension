@@ -110,9 +110,9 @@ module.exports = {
         },
         {
             name: 'config',
-            url: getConfigFileName(),
+            url: '/data/extension-config.json',
             format: 'json',
-            source: 'external'
+            source: 'local'
         }
     ],
     httpsErrorCodes: {

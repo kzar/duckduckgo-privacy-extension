@@ -11,16 +11,6 @@ ifeq ($(browser),test)
   BUILD_DIR := build/test
 endif
 
-## All source files that potentially need to be bundled or copied.
-# TODO: Use automatic dependency generation (e.g. `browserify --list`) for
-#       the bundling targets instead?
-WATCHED_FILES = $(shell find -L browsers/ shared/ packages/ unit-test/ -type f -not -path "packages/*/node_modules/*" -not -name "*~")
-# If the node_modules/@duckduckgo/ directory exists, include those source files
-# in the list too.
-ifneq ("$(wildcard node_modules/@duckduckgo/)","")
-  WATCHED_FILES += $(shell find -L node_modules/@duckduckgo/ -type f -not -path "node_modules/@duckduckgo/*/.git/*" -not -path "node_modules/@duckduckgo/*/node_modules/*" -not -name "*~")
-endif
-
 
 ###--- Top level targets ---###
 # TODO:
@@ -148,36 +138,44 @@ integration-test/artifacts/attribution.json: node_modules/privacy-test-pages/adC
 	cp $< $@
 
 
-###--- Mkdir targets ---#
-# Note: Intermediate directories can be omitted.
-MKDIR_TARGETS = $(BUILD_DIR)/_locales $(BUILD_DIR)/data/bundled $(BUILD_DIR)/html \
-                $(BUILD_DIR)/img $(BUILD_DIR)/dashboard $(BUILD_DIR)/web_accessible_resources \
-                $(BUILD_DIR)/public/js/content-scripts $(BUILD_DIR)/public/css \
-                $(BUILD_DIR)/public/font
-
-$(MKDIR_TARGETS):
-	mkdir -p $@
-
-
 ###--- Copy targets ---###
-# The empty $(LAST_COPY) file is used to keep track of file copying, since translating the necessary
-# copying to proper Makefile targets is problematic.
-# See https://www.gnu.org/software/make/manual/html_node/Empty-Targets.html
-LAST_COPY = build/.last-copy-$(browser)-$(type)
+COPY_TARGETS =
 
-RSYNC = rsync -ra --exclude="*~"
+define copy-dir
+  $1_TARGETS = $(patsubst $1%,$2%,$(shell find $1 -type f -not -name "*~" -not -name "smarter_encryption.txt"))
+  COPY_TARGETS += $$($1_TARGETS)
+  $$($1_TARGETS): $2%: $1%
+	@mkdir -p $$(dir $$@)
+	cp $$< $$@
+endef
 
-$(LAST_COPY): $(WATCHED_FILES) | $(MKDIR_TARGETS)
-	$(RSYNC) --exclude="smarter_encryption.txt" browsers/$(browser)/* browsers/chrome/_locales shared/data shared/html shared/img $(BUILD_DIR)
-	$(RSYNC) node_modules/@duckduckgo/privacy-dashboard/build/app/* $(BUILD_DIR)/dashboard
-	$(RSYNC) node_modules/@duckduckgo/autofill/dist/autofill.css $(BUILD_DIR)/public/css/autofill.css
-	$(RSYNC) node_modules/@duckduckgo/autofill/dist/autofill-host-styles_$(BROWSER_TYPE).css $(BUILD_DIR)/public/css/autofill-host-styles.css
-	$(RSYNC) shared/font $(BUILD_DIR)/public
-	$(RSYNC) node_modules/@duckduckgo/autofill/dist/*.js shared/js/content-scripts/content-scope-messaging.js $(BUILD_DIR)/public/js/content-scripts
-	$(RSYNC) node_modules/@duckduckgo/tracker-surrogates/surrogates/* $(BUILD_DIR)/web_accessible_resources
-	touch $@
+define copy-file
+  COPY_TARGETS += $2
+  $2: $1
+	@mkdir -p $$(dir $$@)
+	cp $$< $$@
+endef
 
-copy: $(LAST_COPY)
+# Copy files from directories.
+$(eval $(call copy-dir,./browsers/$(browser),$(BUILD_DIR)))
+ifneq ("$(browser)","chrome")
+  $(eval $(call copy-dir,./browsers/chrome/_locales,$(BUILD_DIR)/_locales))
+endif
+$(eval $(call copy-dir,shared/data,$(BUILD_DIR)/data))
+$(eval $(call copy-dir,shared/html,$(BUILD_DIR)/html))
+$(eval $(call copy-dir,shared/img,$(BUILD_DIR)/img))
+$(eval $(call copy-dir,node_modules/@duckduckgo/privacy-dashboard/build/app,$(BUILD_DIR)/dashboard))
+$(eval $(call copy-dir,shared/font,$(BUILD_DIR)/public/font))
+$(eval $(call copy-dir,node_modules/@duckduckgo/tracker-surrogates/surrogates,$(BUILD_DIR)/web_accessible_resources))
+
+# Copy specific files.
+$(eval $(call copy-file,shared/js/content-scripts/content-scope-messaging.js,$(BUILD_DIR)/public/js/content-scripts/content-scope-messaging.js))
+$(eval $(call copy-file,node_modules/@duckduckgo/autofill/dist/autofill.js,$(BUILD_DIR)/public/js/content-scripts/autofill.js))
+$(eval $(call copy-file,node_modules/@duckduckgo/autofill/dist/autofill-debug.js,$(BUILD_DIR)/public/js/content-scripts/autofill-debug.js))
+$(eval $(call copy-file,node_modules/@duckduckgo/autofill/dist/autofill.css,$(BUILD_DIR)/public/css/autofill.css))
+$(eval $(call copy-file,node_modules/@duckduckgo/autofill/dist/autofill-host-styles_$(BROWSER_TYPE).css,$(BUILD_DIR)/public/css/autofill-host-styles.css))
+
+copy: $(COPY_TARGETS)
 
 .PHONY: copy
 
@@ -194,6 +192,16 @@ BROWSERIFY = $(BROWSERIFY_BIN) -t babelify -t [ babelify --global  --only [ $(BR
 # Ensure sourcemaps are included for the bundles during development.
 ifeq ($(type),dev)
   BROWSERIFY += -d
+endif
+
+## All source files that potentially need to be bundled.
+# TODO: Use automatic dependency generation (e.g. `browserify --list`) for
+#       the bundling targets instead?
+WATCHED_FILES = $(shell find -L shared packages/ unit-test/ -type f -not -path "packages/*/node_modules/*" -not -name "*~")
+# If the node_modules/@duckduckgo/ directory exists, include those source files
+# in the list too.
+ifneq ("$(wildcard node_modules/@duckduckgo/)","")
+  WATCHED_FILES += $(shell find -L node_modules/@duckduckgo/ -type f -not -path "node_modules/@duckduckgo/*/.git/*" -not -path "node_modules/@duckduckgo/*/node_modules/*" -not -name "*~")
 endif
 
 ## Extension background/serviceworker script.
@@ -286,19 +294,17 @@ shared/data/smarter_encryption.txt:
 
 # Generate Smarter Encryption declarativeNetRequest rules for MV3 builds.
 $(BUILD_DIR)/data/bundled/smarter-encryption-rules.json: shared/data/smarter_encryption.txt
+	mkdir -p `dirname $@`
 	npx ddg2dnr smarter-encryption $< $@
 
 ifeq ('$(browser)','chrome-mv3')
   BUILD_TARGETS += $(BUILD_DIR)/data/bundled/smarter-encryption-rules.json
 endif
 
-$(BUILD_DIR)/data/surrogates.txt: $(BUILD_DIR)/web_accessible_resources
-	node scripts/generateListOfSurrogates.js -i $</ > $@
+$(BUILD_DIR)/data/surrogates.txt: $(node_modules/@duckduckgo/tracker-surrogates/surrogates_TARGETS)
+	node scripts/generateListOfSurrogates.js -i $(dir $<) > $@
 
 BUILD_TARGETS += $(BUILD_DIR)/data/surrogates.txt
-
-# Ensure directories exist before build targets are created.
-$(BUILD_TARGETS): | $(MKDIR_TARGETS)
 
 build: $(BUILD_TARGETS)
 

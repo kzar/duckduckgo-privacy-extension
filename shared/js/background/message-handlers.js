@@ -5,11 +5,11 @@ import parseUserAgentString from '../shared-utils/parse-user-agent-string'
 import { getExtensionURL, notifyPopup } from './wrapper'
 import { isFeatureEnabled, reloadCurrentTab } from './utils'
 import { ensureClickToLoadRuleActionDisabled } from './dnr-click-to-load'
+import tdsStorage from './storage/tds'
 const { getDomain } = require('tldts')
 const utils = require('./utils')
 const settings = require('./settings')
 const tabManager = require('./tab-manager')
-const tdsStorage = require('./storage/tds')
 const trackers = require('./trackers')
 const constants = require('../../data/constants')
 const Companies = require('./companies')
@@ -280,13 +280,9 @@ export function getEmailProtectionCapabilities (_, sender) {
 }
 
 export function getIncontextSignupDismissedAt () {
-    const initiallyDismissedAt = settings.getSetting('incontextSignupInitiallyDismissedAt')
     const permanentlyDismissedAt = settings.getSetting('incontextSignupPermanentlyDismissedAt')
-    return { success: { initiallyDismissedAt, permanentlyDismissedAt } }
-}
-
-export function setIncontextSignupInitiallyDismissedAt ({ value }) {
-    settings.updateSetting('incontextSignupInitiallyDismissedAt', value)
+    const isInstalledRecently = utils.isInstalledWithinDays(3)
+    return { success: { permanentlyDismissedAt, isInstalledRecently } }
 }
 
 export function setIncontextSignupPermanentlyDismissedAt ({ value }) {

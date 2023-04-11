@@ -161,6 +161,13 @@ $(MKDIR_TARGETS):
 	mkdir -p $@
 
 
+###--- Node dependencies ---###
+
+node_modules: package.json
+	npm install
+	touch $@
+
+
 ###--- Copy targets ---###
 # The empty $(LAST_COPY) file is used to keep track of file copying, since translating the necessary
 # copying to proper Makefile targets is problematic.
@@ -169,7 +176,7 @@ LAST_COPY = build/.last-copy-$(browser)-$(type)
 
 RSYNC = rsync -ra --exclude="*~"
 
-$(LAST_COPY): $(WATCHED_FILES) | $(MKDIR_TARGETS)
+$(LAST_COPY): $(WATCHED_FILES) node_modules | $(MKDIR_TARGETS)
 	$(RSYNC) browsers/$(browser)/* browsers/chrome/_locales shared/data shared/html shared/img $(BUILD_DIR)
 	$(RSYNC) node_modules/@duckduckgo/privacy-dashboard/build/app/* $(BUILD_DIR)/dashboard
 	$(RSYNC) node_modules/@duckduckgo/autofill/dist/autofill.css $(BUILD_DIR)/public/css/autofill.css
@@ -324,8 +331,9 @@ BUILD_TARGETS += $(BUILD_DIR)/data/surrogates.txt
 $(BUILD_DIR)/buildtime.txt: $(BUILD_TARGETS) $(LAST_COPY)
 	echo $(shell date +"%Y%m%d_%H%M%S") > $(BUILD_DIR)/buildtime.txt
 
-# Ensure directories exist before build targets are created.
-$(BUILD_TARGETS): | $(MKDIR_TARGETS)
+# Ensure directories exist before build targets are created, also that build
+# targets are remade when node_modules are updated.
+$(BUILD_TARGETS): node_modules | $(MKDIR_TARGETS)
 
 build: $(BUILD_TARGETS)
 

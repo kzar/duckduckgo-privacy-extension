@@ -9,9 +9,10 @@ const thirdPartyTracker = 'broken.third-party.site';
 const thirdPartyAd = 'convert.ad-company.site';
 
 async function waitForAllResults(page) {
-    while ((await page.$$('#tests-details > li > span > ul')).length < 2) {
-        await new Promise((resolve) => setTimeout(resolve, 100));
-    }
+    await page.waitForFunction(
+        () => document.querySelectorAll('#tests-details > li > span > ul').length >= 2,
+        { timeout: 10000 },
+    );
 }
 
 test.describe('Storage blocking Tests', () => {
